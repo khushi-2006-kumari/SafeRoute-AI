@@ -1,0 +1,2848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>SafeRoute - Ultimate Mobile App</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
+        }
+
+        /* MOBILE CONTAINER */
+        .app-container {
+            width: 100vw;
+            height: 100vh;
+            background: white;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Status Bar */
+        .status-bar {
+            height: 44px;
+            background: #2D5A87;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            font-size: 14px;
+            font-weight: 600;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
+
+        /* Screen Base */
+        .screen {
+            display: none;
+            height: 100vh;
+            position: relative;
+            background: white;
+            padding-top: 44px;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        /* PERFECT NAVIGATION CONTROLS - ALWAYS VISIBLE */
+        .nav-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 12px;
+            background: rgba(0,0,0,0.9);
+            padding: 12px 16px;
+            border-radius: 30px;
+            z-index: 1000;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-btn {
+            padding: 12px 18px;
+            background: #2D5A87;
+            color: white;
+            border: none;
+            border-radius: 22px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            min-width: 80px;
+            text-align: center;
+            touch-action: manipulation;
+        }
+        .nav-btn:active {
+            background: #1E3A5F;
+            transform: translateY(-2px);
+        }
+
+        .nav-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+            opacity: 0.5;
+        }
+
+        .screen-indicator {
+            position: fixed;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.9);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 13px;
+            font-weight: 600;
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            /* HIDE FOR PRODUCTION DEMO */
+            display: none;
+        }
+
+        /* SPLASH SCREEN */
+        .splash-screen {
+            background: linear-gradient(135deg, #2D5A87 0%, #1E3A5F 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+            padding: 40px;
+            padding-top: 84px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .splash-logo {
+            width: 140px;
+            height: 140px;
+            margin-bottom: 40px;
+            opacity: 0;
+            transform: scale(0.5);
+            animation: logoAppear 1.5s ease-out 0.5s forwards;
+        }
+
+        .splash-title {
+            font-size: 42px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            letter-spacing: -1px;
+            opacity: 0;
+            transform: translateY(30px);
+            animation: titleSlideUp 1s ease-out 1.2s forwards;
+        }
+
+        .splash-tagline {
+            font-size: 20px;
+            opacity: 0;
+            font-weight: 400;
+            line-height: 1.4;
+            max-width: 280px;
+            transform: translateY(20px);
+            animation: taglineSlideUp 1s ease-out 1.8s forwards;
+        }
+
+        /* Animations */
+        @keyframes logoAppear {
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        @keyframes titleSlideUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes taglineSlideUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ONBOARDING SCREENS */
+        .onboarding-screen {
+            padding: 60px 30px 120px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: calc(100vh - 44px);
+        }
+
+        .onboarding-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .onboarding-bottom {
+            margin-top: auto;
+            padding-bottom: 20px;
+        }
+
+        .onboarding-illustration {
+            width: 200px;
+            height: 200px;
+            margin: 0 auto 40px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 80px;
+        }
+
+        .onboarding-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #2D5A87;
+            margin-bottom: 20px;
+        }
+
+        .onboarding-text {
+            font-size: 16px;
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 40px;
+        }
+
+        .onboarding-dots {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 30px;
+        }
+
+        .onboarding-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ddd;
+            transition: all 0.3s ease;
+        }
+
+        .onboarding-dot.active {
+            background: #2D5A87;
+            transform: scale(1.2);
+        }
+
+        /* BUTTONS */
+        .primary-btn {
+            background: linear-gradient(135deg, #2D5A87 0%, #1E3A5F 100%);
+            color: white;
+            border: none;
+            padding: 16px 32px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(45, 90, 135, 0.3);
+            width: 100%;
+            max-width: 280px;
+            margin: 0 auto;
+            touch-action: manipulation;
+        }
+
+        .primary-btn:active {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(45, 90, 135, 0.4);
+        }
+
+        /* LOGIN SCREEN */
+        .login-screen {
+            padding: 80px 30px 120px;
+        }
+
+        .login-title {
+            font-size: 32px;
+            font-weight: 700;
+            color: #2D5A87;
+            margin-bottom: 10px;
+        }
+
+        .login-subtitle {
+            font-size: 16px;
+            color: #666;
+            margin-bottom: 40px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 16px;
+            border: 2px solid #f0f0f0;
+            border-radius: 12px;
+            font-size: 16px;
+            background: #fafafa;
+            transition: all 0.3s ease;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #2D5A87;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(45, 90, 135, 0.1);
+        }
+
+        .social-btn {
+            width: 100%;
+            padding: 16px;
+            border: 2px solid #f0f0f0;
+            border-radius: 12px;
+            background: white;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            touch-action: manipulation;
+        }
+
+        .social-btn:active {
+            border-color: #2D5A87;
+            background: #f8f9ff;
+        }
+
+        .guest-link {
+            text-align: center;
+            color: #2D5A87;
+            text-decoration: none;
+            font-weight: 600;
+            margin-top: 30px;
+            display: block;
+            padding: 12px;
+            border-radius: 8px;
+            transition: background 0.3s ease;
+        }
+
+        .guest-link:active {
+            background: rgba(45, 90, 135, 0.1);
+        }
+
+        /* LOCATION PERMISSION */
+        .permission-screen {
+            padding: 100px 30px 120px;
+            text-align: center;
+        }
+
+        .permission-icon {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #2D5A87 0%, #1E3A5F 100%);
+            border-radius: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 40px;
+            font-size: 50px;
+            color: white;
+            box-shadow: 0 10px 30px rgba(45, 90, 135, 0.3);
+        }
+
+        /* SCROLLABLE SCREENS */
+        .scrollable-screen {
+            overflow-y: auto;
+            height: calc(100vh - 44px);
+            padding-bottom: 120px;
+        }
+
+        /* HOME SCREEN */
+        .home-screen {
+            position: relative;
+        }
+
+        .map-container {
+            height: 60vh;
+            background: linear-gradient(45deg, #e8f5e8 0%, #f0f8ff 100%);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .map-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: 
+                radial-gradient(circle at 30% 40%, rgba(45, 90, 135, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 70% 60%, rgba(76, 175, 80, 0.1) 0%, transparent 50%);
+        }
+
+        .search-bar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            background: white;
+            border-radius: 25px;
+            padding: 16px 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .search-bar:active {
+            box-shadow: 0 6px 25px rgba(0,0,0,0.15);
+        }
+
+        .floating-buttons {
+            position: absolute;
+            right: 20px;
+            top: 100px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .floating-btn {
+            width: 56px;
+            height: 56px;
+            border-radius: 28px;
+            border: none;
+            background: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            touch-action: manipulation;
+        }
+
+        .floating-btn:active {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        .sos-btn { background: #E53E3E; color: white; }
+        .chat-btn { background: #4CAF50; color: white; }
+        .profile-btn { background: #FF9800; color: white; }
+
+        .bottom-sheet {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 20px 20px 0 0;
+            padding: 20px;
+            height: 40vh;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+        }
+
+        .sheet-handle {
+            width: 40px;
+            height: 4px;
+            background: #ddd;
+            border-radius: 2px;
+            margin: 0 auto 20px;
+        }
+        /* ROUTE SCREENS */
+        .route-options-screen {
+            padding: 20px 20px 120px;
+            overflow-y: auto;
+            height: calc(100vh - 44px);
+        }
+
+        .route-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            position: sticky;
+            top: 0;
+            background: white;
+            padding: 10px 0;
+            z-index: 10;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            margin-right: 15px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            transition: background 0.3s ease;
+            color: #2D5A87;
+        }
+
+        .back-btn:active {
+            background: rgba(45, 90, 135, 0.1);
+        }
+
+        .route-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #2D5A87;
+        }
+
+        .route-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .route-card:active {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+
+        .route-card.recommended {
+            border-color: #4CAF50;
+            background: linear-gradient(135deg, #f8fff8 0%, #ffffff 100%);
+        }
+
+        .route-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .route-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .safety-badge {
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .safety-high { background: #4CAF50; }
+        .safety-medium { background: #FF9800; }
+        .safety-low { background: #E53E3E; }
+
+        .route-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #2D5A87;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #666;
+            margin-top: 2px;
+        }
+
+        .safety-features {
+            font-size: 12px;
+            color: #666;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .feature-tag {
+            background: #f0f0f0;
+            padding: 4px 8px;
+            border-radius: 8px;
+            font-size: 10px;
+        }
+
+        /* CHAT SCREEN */
+        .chat-screen {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 44px);
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #2D5A87 0%, #1E3A5F 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .chat-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .chat-info h3 {
+            font-size: 18px;
+            margin-bottom: 2px;
+        }
+
+        .chat-info p {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            margin-bottom: 120px;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-bubble {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .message.ai .message-bubble {
+            background: white;
+            color: #333;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message.user .message-bubble {
+            background: #2D5A87;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 16px;
+            background: #2D5A87;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .message.user .message-avatar {
+            background: #4CAF50;
+        }
+
+        .chat-input {
+            position: fixed;
+            bottom: 120px;
+            left: 0;
+            right: 0;
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #eee;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .chat-input input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #f0f0f0;
+            border-radius: 25px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .chat-input input:focus {
+            border-color: #2D5A87;
+        }
+
+        .send-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 22px;
+            background: #2D5A87;
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        /* PROFILE SCREEN */
+        .profile-screen {
+            padding: 20px 20px 120px;
+            overflow-y: auto;
+            height: calc(100vh - 44px);
+        }
+
+        .profile-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #f8f9ff 0%, #ffffff 100%);
+            border-radius: 16px;
+        }
+
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 40px;
+            background: linear-gradient(135deg, #2D5A87 0%, #1E3A5F 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: white;
+            margin: 0 auto 15px;
+            box-shadow: 0 8px 25px rgba(45, 90, 135, 0.3);
+        }
+
+        .profile-name {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .profile-email {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .profile-section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .profile-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .profile-item:last-child {
+            border-bottom: none;
+        }
+
+        .item-label {
+            font-size: 14px;
+            color: #333;
+        }
+
+        .item-value {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .toggle-switch {
+            width: 44px;
+            height: 24px;
+            background: #ccc;
+            border-radius: 24px;
+            position: relative;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+
+        .toggle-switch.active {
+            background: #2D5A87;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: white;
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .toggle-switch.active::after {
+            transform: translateX(20px);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .stat-number {
+            font-size: 28px;
+            font-weight: 700;
+            color: #2D5A87;
+            margin-bottom: 5px;
+        }
+
+        .stat-description {
+            font-size: 12px;
+            color: #666;
+        }
+        /* EMERGENCY SCREEN */
+        .emergency-screen {
+            padding: 20px 20px 120px;
+            text-align: center;
+            background: linear-gradient(135deg, #ffe6e6 0%, #ffffff 100%);
+            overflow-y: auto;
+            height: calc(100vh - 44px);
+        }
+
+        .emergency-title {
+            font-size: 24px;
+            font-weight: 700;
+            color: #E53E3E;
+            margin-bottom: 30px;
+        }
+
+        .sos-button {
+            width: 200px;
+            height: 200px;
+            border-radius: 100px;
+            background: #E53E3E;
+            border: none;
+            color: white;
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0 auto 40px;
+            display: block;
+            cursor: pointer;
+            box-shadow: 0 10px 30px rgba(229, 62, 62, 0.3);
+            animation: pulse-red 2s infinite;
+            touch-action: manipulation;
+        }
+
+        .sos-button:active {
+            transform: scale(0.95);
+        }
+
+        @keyframes pulse-red {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .emergency-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .emergency-action {
+            background: white;
+            border: 2px solid #f0f0f0;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            touch-action: manipulation;
+        }
+
+        .emergency-action:active {
+            border-color: #E53E3E;
+            transform: scale(0.98);
+        }
+
+        .action-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .action-text {
+            font-size: 12px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .location-shared {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            padding: 15px;
+            font-size: 14px;
+            color: #155724;
+        }
+
+        /* NAVIGATION SCREEN */
+        .navigation-screen {
+            position: relative;
+            height: calc(100vh - 44px);
+        }
+
+        .nav-map {
+            height: 65%;
+            background: linear-gradient(45deg, #e8f5e8 0%, #f0f8ff 100%);
+            position: relative;
+        }
+
+        .nav-header {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            background: rgba(255,255,255,0.95);
+            border-radius: 15px;
+            padding: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .nav-instruction {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .nav-distance {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .nav-bottom {
+            position: absolute;
+            bottom: 120px;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 20px;
+            border-radius: 20px 20px 0 0;
+            height: 35%;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+        }
+
+        /* ENHANCED LIVE NAVIGATION STYLES */
+        .live-location-indicator {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 100;
+        }
+
+        .location-pulse {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(45, 90, 135, 0.3);
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: pulse-location 2s infinite;
+        }
+
+        .location-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #2D5A87;
+            border: 3px solid white;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            z-index: 101;
+        }
+
+        @keyframes pulse-location {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+        }
+
+        .nav-controls-overlay {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 100;
+        }
+
+        .nav-control-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 22px;
+            background: rgba(255,255,255,0.95);
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            touch-action: manipulation;
+        }
+
+        .nav-control-btn:active {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+
+        .next-turn-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .turn-icon {
+            font-size: 24px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #2D5A87;
+            border-radius: 20px;
+            color: white;
+        }
+
+        .turn-details {
+            flex: 1;
+        }
+
+        .turn-instruction {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 2px;
+        }
+
+        .turn-distance {
+            font-size: 14px;
+            color: #666;
+        }
+
+        /* Google Map Container */
+        #liveNavMap {
+            position: relative;
+            height: 65%;
+            background: linear-gradient(45deg, #e8f5e8 0%, #f0f8ff 100%);
+        }
+
+        #liveNavMap .gm-style {
+            border-radius: 0;
+        }
+
+        .nav-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .nav-stat-value {
+            font-size: 20px;
+            font-weight: 600;
+            color: #2D5A87;
+        }
+
+        .nav-stat-label {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .safety-alert {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            color: #856404;
+            line-height: 1.4;
+        }
+
+        /* ROUTE DETAIL SCREEN */
+        .route-detail-screen { 
+            position: relative; 
+            height: calc(100vh - 44px);
+        }
+
+        .detail-map { 
+            height: 50%; 
+            background: linear-gradient(45deg, #e8f5e8 0%, #f0f8ff 100%); 
+            position: relative; 
+        }
+
+        .route-path { 
+            position: absolute; 
+            top: 50%; 
+            left: 20%; 
+            right: 20%; 
+            height: 4px; 
+            background: #4CAF50; 
+            border-radius: 2px; 
+            transform: translateY(-50%); 
+        }
+
+        .route-points { 
+            position: absolute; 
+            top: 50%; 
+            left: 20%; 
+            right: 20%; 
+            transform: translateY(-50%); 
+            display: flex; 
+            justify-content: space-between; 
+        }
+
+        .route-point { 
+            width: 12px; 
+            height: 12px; 
+            border-radius: 50%; 
+            background: white; 
+            border: 3px solid #4CAF50; 
+        }
+
+        .detail-content { 
+            padding: 20px; 
+            height: 50%; 
+            overflow-y: auto; 
+            padding-bottom: 120px;
+        }
+
+        .safety-breakdown { 
+            background: #f8f9fa; 
+            border-radius: 12px; 
+            padding: 15px; 
+            margin-bottom: 20px; 
+        }
+
+        .breakdown-title { 
+            font-size: 16px; 
+            font-weight: 600; 
+            color: #333; 
+            margin-bottom: 15px; 
+        }
+
+        .breakdown-item { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            margin-bottom: 10px; 
+        }
+
+        .breakdown-label { 
+            font-size: 14px; 
+            color: #666; 
+        }
+
+        .breakdown-value { 
+            font-size: 14px; 
+            font-weight: 600; 
+            color: #2D5A87; 
+        }
+
+        /* REPORT SCREEN */
+        .report-screen { 
+            padding: 20px 20px 120px; 
+            overflow-y: auto; 
+            height: calc(100vh - 44px); 
+        }
+
+        .report-title { 
+            font-size: 24px; 
+            font-weight: 600; 
+            color: #2D5A87; 
+            margin-bottom: 20px; 
+        }
+
+        .issue-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 15px; 
+            margin-bottom: 30px; 
+        }
+
+        .issue-card { 
+            background: white; 
+            border: 2px solid #f0f0f0; 
+            border-radius: 12px; 
+            padding: 20px; 
+            text-align: center; 
+            cursor: pointer; 
+            transition: all 0.3s ease; 
+            touch-action: manipulation;
+        }
+
+        .issue-card:active { 
+            border-color: #2D5A87; 
+            transform: scale(0.98);
+        }
+
+        .issue-card.selected { 
+            border-color: #2D5A87; 
+            background: #f8f9ff; 
+        }
+
+        .issue-icon { 
+            font-size: 32px; 
+            margin-bottom: 10px; 
+        }
+
+        .issue-text { 
+            font-size: 14px; 
+            font-weight: 600; 
+            color: #333; 
+        }
+
+        .comment-box { 
+            width: 100%; 
+            height: 100px; 
+            border: 2px solid #f0f0f0; 
+            border-radius: 12px; 
+            padding: 15px; 
+            font-size: 14px; 
+            resize: none; 
+            margin-bottom: 20px; 
+            font-family: inherit;
+        }
+
+        .comment-box:focus {
+            outline: none;
+            border-color: #2D5A87;
+        }
+
+        /* INSIGHTS SCREEN */
+        .insights-screen { 
+            padding: 20px 20px 120px; 
+            overflow-y: auto; 
+            height: calc(100vh - 44px); 
+        }
+
+        .insights-title { 
+            font-size: 24px; 
+            font-weight: 600; 
+            color: #2D5A87; 
+            margin-bottom: 20px; 
+        }
+
+        .chart-container { 
+            background: white; 
+            border-radius: 12px; 
+            padding: 20px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08); 
+            margin-bottom: 20px; 
+        }
+
+        .chart-title { 
+            font-size: 16px; 
+            font-weight: 600; 
+            color: #333; 
+            margin-bottom: 15px; 
+        }
+
+        .chart-bar { 
+            display: flex; 
+            align-items: center; 
+            margin-bottom: 10px; 
+        }
+
+        .bar-label { 
+            width: 60px; 
+            font-size: 12px; 
+            color: #666; 
+        }
+
+        .bar-fill { 
+            flex: 1; 
+            height: 8px; 
+            background: #f0f0f0; 
+            border-radius: 4px; 
+            margin: 0 10px; 
+            position: relative; 
+        }
+
+        .bar-progress { 
+            height: 100%; 
+            background: #4CAF50; 
+            border-radius: 4px; 
+        }
+
+        .bar-value { 
+            font-size: 12px; 
+            font-weight: 600; 
+            color: #2D5A87; 
+        }
+
+        /* WORKING ROUTE FINDER */
+        .working-route-finder {
+            padding: 20px 20px 120px;
+            overflow-y: auto;
+            height: calc(100vh - 44px);
+        }
+
+        .container {
+            max-width: 100%;
+        }
+
+        .input-section {
+            background: white;
+            padding: 30px 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .input-section .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-section label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .input-section input, .input-section select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .input-section input:focus, .input-section select:focus {
+            outline: none;
+            border-color: #2D5A87;
+        }
+
+        .results {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .results.hidden {
+            display: none;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+
+        .loading.hidden {
+            display: none;
+        }
+
+        .map {
+            height: 300px;
+            border-radius: 10px;
+            overflow: hidden;
+            background: linear-gradient(45deg, #e8f5e8 0%, #f0f8ff 100%);
+            border: 2px solid #f0f0f0;
+        }
+
+        .map.hidden {
+            display: none;
+        }
+
+        /* Leaflet map specific styles */
+        .leaflet-container {
+            height: 100%;
+            width: 100%;
+            border-radius: 8px;
+        }
+
+        /* Responsive adjustments */
+        @media (max-height: 700px) {
+            .onboarding-illustration {
+                width: 150px;
+                height: 150px;
+                font-size: 60px;
+            }
+            
+            .splash-title {
+                font-size: 36px;
+            }
+        }
+
+        @media (max-width: 350px) {
+            .splash-title {
+                font-size: 32px;
+            }
+            
+            .onboarding-title {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="screen-indicator" id="indicator">1/17 - Splash Screen</div>
+    
+    <div class="app-container">
+        <!-- Status Bar -->
+        <div class="status-bar">
+            <span>9:41</span>
+            <span>SafeRoute</span>
+            <span>🔋 100%</span>
+        </div>
+
+        <!-- 1. SPLASH SCREEN -->
+        <div class="screen active" id="screen1">
+            <div class="splash-screen">
+                <svg class="splash-logo" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="60" cy="60" r="50" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+                    <path d="M30 30 L60 15 L90 30 L90 70 C90 85 60 105 60 105 C60 105 30 85 30 70 Z" fill="rgba(255,255,255,0.9)" stroke="rgba(255,255,255,0.7)" stroke-width="2"/>
+                    <path d="M40 45 Q50 55 60 45 Q70 35 80 45" stroke="#4CAF50" stroke-width="3" fill="none"/>
+                    <circle cx="40" cy="45" r="4" fill="#4CAF50"/>
+                    <circle cx="80" cy="45" r="4" fill="#E53E3E"/>
+                </svg>
+                <div class="splash-title">SafeRoute</div>
+                <div class="splash-tagline">Navigate Safer.<br>Not Just Faster.</div>
+            </div>
+        </div>
+
+        <!-- 2. ONBOARDING SCREEN 1 -->
+        <div class="screen" id="screen2">
+            <div class="onboarding-screen">
+                <div class="onboarding-content">
+                    <div class="onboarding-illustration" style="background: linear-gradient(135deg, #e8f5e8 0%, #f0f8ff 100%);">
+                        🗺️
+                    </div>
+                    <div class="onboarding-title">Routes Ranked by Safety</div>
+                    <div class="onboarding-text">Get route recommendations based on safety scores, not just distance. Our AI analyzes lighting, crowd density, and safety data.</div>
+                </div>
+                <div class="onboarding-bottom">
+                    <div class="onboarding-dots">
+                        <div class="onboarding-dot active"></div>
+                        <div class="onboarding-dot"></div>
+                        <div class="onboarding-dot"></div>
+                    </div>
+                    <button class="primary-btn" onclick="nextScreen()">Next</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. ONBOARDING SCREEN 2 -->
+        <div class="screen" id="screen3">
+            <div class="onboarding-screen">
+                <div class="onboarding-content">
+                    <div class="onboarding-illustration" style="background: linear-gradient(135deg, #fff3e0 0%, #f3e5f5 100%);">
+                        🤖
+                    </div>
+                    <div class="onboarding-title">AI-Based Safety Scores</div>
+                    <div class="onboarding-text">Every area gets a real-time safety score based on crowd presence, CCTV coverage, lighting, and historical incident data.</div>
+                </div>
+                <div class="onboarding-bottom">
+                    <div class="onboarding-dots">
+                        <div class="onboarding-dot"></div>
+                        <div class="onboarding-dot active"></div>
+                        <div class="onboarding-dot"></div>
+                    </div>
+                    <button class="primary-btn" onclick="nextScreen()">Next</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. ONBOARDING SCREEN 3 -->
+        <div class="screen" id="screen4">
+            <div class="onboarding-screen">
+                <div class="onboarding-content">
+                    <div class="onboarding-illustration" style="background: linear-gradient(135deg, #ffebee 0%, #fce4ec 100%);">
+                        🚨
+                    </div>
+                    <div class="onboarding-title">Instant Emergency Help</div>
+                    <div class="onboarding-text">One-tap SOS button instantly shares your location with emergency contacts and authorities when you need help most.</div>
+                </div>
+                <div class="onboarding-bottom">
+                    <div class="onboarding-dots">
+                        <div class="onboarding-dot"></div>
+                        <div class="onboarding-dot"></div>
+                        <div class="onboarding-dot active"></div>
+                    </div>
+                    <button class="primary-btn" onclick="nextScreen()">Get Started</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. LOGIN SCREEN -->
+        <div class="screen" id="screen5">
+            <div class="login-screen">
+                <div class="login-title">Welcome Back</div>
+                <div class="login-subtitle">Sign in to access your safety preferences</div>
+                
+                <div class="input-group">
+                    <input type="email" class="input-field" placeholder="Email or phone number">
+                </div>
+                
+                <button class="primary-btn" style="margin-bottom: 20px;" onclick="nextScreen()">Continue</button>
+                
+                <div class="social-btn">
+                    <span>🔍</span>
+                    <span>Continue with Google</span>
+                </div>
+                
+                <div class="social-btn">
+                    <span>📱</span>
+                    <span>Continue with Phone</span>
+                </div>
+                
+                <a href="#" class="guest-link" onclick="nextScreen()">Continue as Guest</a>
+            </div>
+        </div>
+
+        <!-- 6. LOCATION PERMISSION -->
+        <div class="screen" id="screen6">
+            <div class="permission-screen">
+                <div class="permission-icon">📍</div>
+                <div class="onboarding-title">Enable Location Access</div>
+                <div class="onboarding-text">SafeRoute needs your location to find the safest routes and provide real-time safety alerts during your journey.</div>
+                <button class="primary-btn" onclick="nextScreen()">Allow Location Access</button>
+                <a href="#" class="guest-link" onclick="nextScreen()">Maybe Later</a>
+            </div>
+        </div>
+        <!-- 7. HOME SCREEN -->
+        <div class="screen" id="screen7">
+            <div class="home-screen">
+                <div class="map-container">
+                    <div class="map-overlay"></div>
+                    <input type="text" class="search-bar" placeholder="Where to?" onclick="goToScreen(16)">
+                    <div class="floating-buttons">
+                        <button class="floating-btn sos-btn" onclick="goToScreen(13)" title="Emergency SOS">🚨</button>
+                        <button class="floating-btn chat-btn" onclick="goToScreen(8)" title="Chat with SafeRoute AI">💬</button>
+                        <button class="floating-btn profile-btn" onclick="goToScreen(9)" title="Profile">👤</button>
+                        <button class="floating-btn" onclick="goToScreen(17)" title="Safety Insights">📊</button>
+                    </div>
+                </div>
+                <div class="bottom-sheet">
+                    <div class="sheet-handle"></div>
+                    <h3 style="margin-bottom: 15px; color: #333;">Quick Actions</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 12px; text-align: center; cursor: pointer;" onclick="goToScreen(10)">
+                            <div style="font-size: 24px; margin-bottom: 8px;">🗺️</div>
+                            <div style="font-size: 12px; font-weight: 600;">Find Route</div>
+                        </div>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 12px; text-align: center; cursor: pointer;" onclick="goToScreen(15)">
+                            <div style="font-size: 24px; margin-bottom: 8px;">📝</div>
+                            <div style="font-size: 12px; font-weight: 600;">Report Issue</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 8. CHAT WITH SAFEROUTE AI -->
+        <div class="screen" id="screen8">
+            <div class="chat-screen">
+                <div class="chat-header">
+                    <button class="back-btn" onclick="goToScreen(7)" style="color: white; margin-right: 0;">←</button>
+                    <div class="chat-avatar">🤖</div>
+                    <div class="chat-info">
+                        <h3>SafeRoute AI</h3>
+                        <p>Your safety assistant</p>
+                    </div>
+                </div>
+                <div class="chat-messages">
+                    <div class="message ai">
+                        <div class="message-avatar">🤖</div>
+                        <div class="message-bubble">
+                            Hi! I'm SafeRoute AI. I can help you with:
+                            <br>• Finding safe routes
+                            <br>• Safety tips for your area
+                            <br>• Emergency assistance
+                            <br>• Reporting unsafe areas
+                            <br><br>How can I help you today?
+                        </div>
+                    </div>
+                    <div class="message user">
+                        <div class="message-avatar">👤</div>
+                        <div class="message-bubble">
+                            What's the safest route from Connaught Place to Dwarka at night?
+                        </div>
+                    </div>
+                    <div class="message ai">
+                        <div class="message-avatar">🤖</div>
+                        <div class="message-bubble">
+                            For night travel from Connaught Place to Dwarka, I recommend the Main Road Route via Ring Road. It has:
+                            <br>• 85% safety score
+                            <br>• Well-lit streets
+                            <br>• High crowd density
+                            <br>• CCTV coverage
+                            <br>• Police patrol areas
+                            <br><br>Would you like me to start navigation?
+                        </div>
+                    </div>
+                    <div class="message user">
+                        <div class="message-avatar">👤</div>
+                        <div class="message-bubble">
+                            Yes, please start navigation
+                        </div>
+                    </div>
+                    <div class="message ai">
+                        <div class="message-avatar">🤖</div>
+                        <div class="message-bubble">
+                            Perfect! I've started navigation on the safest route. You'll receive real-time safety alerts during your journey. Stay safe! 🛡️
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-input">
+                    <input type="text" placeholder="Ask SafeRoute AI anything...">
+                    <button class="send-btn">➤</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 9. PROFILE SCREEN -->
+        <div class="screen" id="screen9">
+            <div class="profile-screen">
+                <div class="route-header">
+                    <button class="back-btn" onclick="goToScreen(7)">←</button>
+                    <div class="route-title">Profile</div>
+                </div>
+
+                <div class="profile-header">
+                    <div class="profile-avatar">👤</div>
+                    <div class="profile-name">Sarah Johnson</div>
+                    <div class="profile-email">sarah.johnson@email.com</div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number">47</div>
+                        <div class="stat-description">Safe routes taken</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">8.2</div>
+                        <div class="stat-description">Average safety score</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">156</div>
+                        <div class="stat-description">km traveled safely</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">12</div>
+                        <div class="stat-description">Night journeys</div>
+                    </div>
+                </div>
+
+                <div class="profile-section">
+                    <div class="section-title">Safety Preferences</div>
+                    <div class="profile-item">
+                        <span class="item-label">Prioritize Safety Over Speed</span>
+                        <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+                    </div>
+                    <div class="profile-item">
+                        <span class="item-label">Avoid Poorly Lit Areas</span>
+                        <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+                    </div>
+                    <div class="profile-item">
+                        <span class="item-label">Night Mode Auto-Enable</span>
+                        <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+                    </div>
+                </div>
+
+                <div class="profile-section">
+                    <div class="section-title">Emergency Contacts</div>
+                    <div class="profile-item">
+                        <span class="item-label">Mom</span>
+                        <span class="item-value">+91 98765 43210</span>
+                    </div>
+                    <div class="profile-item">
+                        <span class="item-label">Best Friend</span>
+                        <span class="item-value">+91 87654 32109</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 10. ROUTE OPTIONS SCREEN -->
+        <div class="screen" id="screen10">
+            <div class="route-options-screen">
+                <div class="route-header">
+                    <button class="back-btn" onclick="goToScreen(7)">←</button>
+                    <div class="route-title">Route Options</div>
+                </div>
+
+                <!-- Safest Route (Recommended) -->
+                <div class="route-card recommended" onclick="nextScreen()">
+                    <div class="route-card-header">
+                        <div class="route-name">🏆 Safest Route</div>
+                        <div class="safety-badge safety-high">SAFE</div>
+                    </div>
+                    <div class="route-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">12.5</div>
+                            <div class="stat-label">km</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">25</div>
+                            <div class="stat-label">mins</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">85</div>
+                            <div class="stat-label">safety</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">High</div>
+                            <div class="stat-label">crowd</div>
+                        </div>
+                    </div>
+                    <div class="safety-features">
+                        <span class="feature-tag">Well-lit streets</span>
+                        <span class="feature-tag">CCTV coverage</span>
+                        <span class="feature-tag">Police patrol</span>
+                        <span class="feature-tag">Main roads</span>
+                    </div>
+                </div>
+
+                <!-- Balanced Route -->
+                <div class="route-card">
+                    <div class="route-card-header">
+                        <div class="route-name">Balanced Route</div>
+                        <div class="safety-badge safety-medium">MODERATE</div>
+                    </div>
+                    <div class="route-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">10.8</div>
+                            <div class="stat-label">km</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">22</div>
+                            <div class="stat-label">mins</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">68</div>
+                            <div class="stat-label">safety</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">Med</div>
+                            <div class="stat-label">crowd</div>
+                        </div>
+                    </div>
+                    <div class="safety-features">
+                        <span class="feature-tag">Some lighting</span>
+                        <span class="feature-tag">Mixed roads</span>
+                        <span class="feature-tag">Moderate crowd</span>
+                    </div>
+                </div>
+
+                <!-- Fastest Route -->
+                <div class="route-card">
+                    <div class="route-card-header">
+                        <div class="route-name">⚡ Fastest Route</div>
+                        <div class="safety-badge safety-low">RISKY</div>
+                    </div>
+                    <div class="route-stats">
+                        <div class="stat-item">
+                            <div class="stat-value">9.2</div>
+                            <div class="stat-label">km</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">18</div>
+                            <div class="stat-label">mins</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">42</div>
+                            <div class="stat-label">safety</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">Low</div>
+                            <div class="stat-label">crowd</div>
+                        </div>
+                    </div>
+                    <div class="safety-features">
+                        <span class="feature-tag">Shortcuts</span>
+                        <span class="feature-tag">Poor lighting</span>
+                        <span class="feature-tag">Isolated areas</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- 11. ROUTE DETAIL SCREEN -->
+        <div class="screen" id="screen11">
+            <div class="route-detail-screen">
+                <div class="detail-map">
+                    <div class="route-path"></div>
+                    <div class="route-points">
+                        <div class="route-point"></div>
+                        <div class="route-point"></div>
+                        <div class="route-point"></div>
+                        <div class="route-point"></div>
+                    </div>
+                </div>
+                <div class="detail-content">
+                    <div class="route-header">
+                        <button class="back-btn" onclick="prevScreen()">←</button>
+                        <div class="route-title">Safest Route Details</div>
+                    </div>
+                    
+                    <div class="safety-breakdown">
+                        <div class="breakdown-title">Safety Breakdown</div>
+                        <div class="breakdown-item">
+                            <span class="breakdown-label">Crowd Density</span>
+                            <span class="breakdown-value">High (95%)</span>
+                        </div>
+                        <div class="breakdown-item">
+                            <span class="breakdown-label">Lighting Quality</span>
+                            <span class="breakdown-value">Excellent (92%)</span>
+                        </div>
+                        <div class="breakdown-item">
+                            <span class="breakdown-label">CCTV Coverage</span>
+                            <span class="breakdown-value">Good (78%)</span>
+                        </div>
+                        <div class="breakdown-item">
+                            <span class="breakdown-label">Past Incidents</span>
+                            <span class="breakdown-value">Very Low (2%)</span>
+                        </div>
+                        <div class="breakdown-item">
+                            <span class="breakdown-label">Police Presence</span>
+                            <span class="breakdown-value">High (88%)</span>
+                        </div>
+                    </div>
+                    
+                    <button class="primary-btn" onclick="nextScreen()">Start Navigation</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 12. LIVE NAVIGATION SCREEN WITH GOOGLE MAPS -->
+        <div class="screen" id="screen12">
+            <div class="navigation-screen">
+                <div class="nav-map" id="liveNavMap">
+                    <!-- Google Map will be loaded here -->
+                    <div class="nav-header">
+                        <div class="nav-instruction">Continue straight for 800m</div>
+                        <div class="nav-distance">Then turn right on MG Road</div>
+                    </div>
+                    
+                    <!-- Live Location Indicator -->
+                    <div class="live-location-indicator">
+                        <div class="location-pulse"></div>
+                        <div class="location-dot"></div>
+                    </div>
+                    
+                    <!-- Navigation Controls -->
+                    <div class="nav-controls-overlay">
+                        <button class="nav-control-btn" onclick="centerMap()" title="Center on location">📍</button>
+                        <button class="nav-control-btn" onclick="toggleView()" title="Toggle view">🗺️</button>
+                        <button class="nav-control-btn" onclick="goToScreen(7)" title="End navigation">❌</button>
+                    </div>
+                </div>
+                <div class="nav-bottom">
+                    <div class="nav-stats">
+                        <div>
+                            <div class="nav-stat-value" id="timeLeft">18</div>
+                            <div class="nav-stat-label">min left</div>
+                        </div>
+                        <div>
+                            <div class="nav-stat-value" id="distanceLeft">8.2</div>
+                            <div class="nav-stat-label">km left</div>
+                        </div>
+                        <div>
+                            <div class="nav-stat-value" id="eta">10:45</div>
+                            <div class="nav-stat-label">ETA</div>
+                        </div>
+                    </div>
+                    <div class="safety-alert" id="safetyAlert">
+                        ⚠️ Approaching low-light area in 200m. Stay alert.
+                    </div>
+                    <div class="next-turn-info">
+                        <div class="turn-icon">➡️</div>
+                        <div class="turn-details">
+                            <div class="turn-instruction">Turn right on MG Road</div>
+                            <div class="turn-distance">in 800m</div>
+                        </div>
+                    </div>
+                    <button class="primary-btn" onclick="goToScreen(7)">End Navigation</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 13. EMERGENCY SOS SCREEN -->
+        <div class="screen" id="screen13">
+            <div class="emergency-screen">
+                <div class="route-header">
+                    <button class="back-btn" onclick="goToScreen(7)">←</button>
+                    <div class="route-title" style="color: #E53E3E;">Emergency SOS</div>
+                </div>
+                <button class="sos-button" onclick="activateSOS()">
+                    SOS<br>
+                    <span style="font-size: 16px;">PRESS & HOLD</span>
+                </button>
+                <div class="emergency-actions">
+                    <div class="emergency-action" onclick="alert('📞 Calling emergency services...')">
+                        <div class="action-icon">📞</div>
+                        <div class="action-text">Call Emergency</div>
+                    </div>
+                    <div class="emergency-action" onclick="alert('👥 Alerting emergency contacts...')">
+                        <div class="action-icon">👥</div>
+                        <div class="action-text">Alert Contacts</div>
+                    </div>
+                    <div class="emergency-action" onclick="alert('📍 Location shared successfully!')">
+                        <div class="action-icon">📍</div>
+                        <div class="action-text">Share Location</div>
+                    </div>
+                    <div class="emergency-action" onclick="alert('📱 Fake call started for safety!')">
+                        <div class="action-icon">📱</div>
+                        <div class="action-text">Fake Call</div>
+                    </div>
+                </div>
+                <div class="location-shared">
+                    ✅ Your location has been shared with emergency contacts
+                </div>
+            </div>
+        </div>
+
+        <!-- 14. SETTINGS SCREEN -->
+        <div class="screen" id="screen14">
+            <div class="profile-screen">
+                <div class="route-header">
+                    <button class="back-btn" onclick="goToScreen(7)">←</button>
+                    <div class="route-title">Settings</div>
+                </div>
+
+                <div class="profile-section">
+                    <div class="section-title">App Preferences</div>
+                    <div class="profile-item">
+                        <span class="item-label">Push Notifications</span>
+                        <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+                    </div>
+                    <div class="profile-item">
+                        <span class="item-label">Location Services</span>
+                        <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+                    </div>
+                    <div class="profile-item">
+                        <span class="item-label">Dark Mode</span>
+                        <div class="toggle-switch" onclick="toggleSwitch(this)"></div>
+                    </div>
+                    <div class="profile-item">
+                        <span class="item-label">Voice Navigation</span>
+                        <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+                    </div>
+                </div>
+
+                <div class="profile-section">
+                    <div class="section-title">Safety Settings</div>
+                    <div class="profile-item">
+                        <span class="item-label">Safety Sensitivity</span>
+                        <span class="item-value">High</span>
+                    </div>
+                    <div class="profile-item">
+                        <span class="item-label">Auto Emergency Alert</span>
+                        <div class="toggle-switch active" onclick="toggleSwitch(this)"></div>
+                    </div>
+                    <div class="profile-item">
+                        <span class="item-label">Share Location with Contacts</span>
+                        <div class="toggle-switch" onclick="toggleSwitch(this)"></div>
+                    </div>
+                </div>
+
+                <div class="profile-section">
+                    <div class="section-title">About</div>
+                    <div class="profile-item">
+                        <span class="item-label">App Version</span>
+                        <span class="item-value">1.0.0</span>
+                    </div>
+                    <div class="profile-item">
+                        <span class="item-label">Privacy Policy</span>
+                        <span class="item-value">View →</span>
+                    </div>
+                    <div class="profile-item">
+                        <span class="item-label">Help & Support</span>
+                        <span class="item-value">Contact →</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 15. REPORT UNSAFE AREA SCREEN -->
+        <div class="screen" id="screen15">
+            <div class="report-screen">
+                <div class="route-header">
+                    <button class="back-btn" onclick="goToScreen(7)">←</button>
+                    <div class="route-title">Report Unsafe Area</div>
+                </div>
+                <p style="color: #666; margin-bottom: 20px;">Help improve safety for everyone by reporting issues in your area.</p>
+                
+                <div class="issue-grid">
+                    <div class="issue-card selected" onclick="selectIssue(this)">
+                        <div class="issue-icon">💡</div>
+                        <div class="issue-text">Poor Lighting</div>
+                    </div>
+                    <div class="issue-card" onclick="selectIssue(this)">
+                        <div class="issue-icon">👥</div>
+                        <div class="issue-text">Harassment</div>
+                    </div>
+                    <div class="issue-card" onclick="selectIssue(this)">
+                        <div class="issue-icon">🏚️</div>
+                        <div class="issue-text">Isolated Area</div>
+                    </div>
+                    <div class="issue-card" onclick="selectIssue(this)">
+                        <div class="issue-icon">🚧</div>
+                        <div class="issue-text">Construction</div>
+                    </div>
+                </div>
+                
+                <textarea class="comment-box" placeholder="Additional details (optional)..."></textarea>
+                
+                <button class="primary-btn" onclick="submitReport()">Submit Report</button>
+            </div>
+        </div>
+
+        <!-- 16. WORKING ROUTE FINDER FROM INDEX.HTML -->
+        <div class="screen" id="screen16">
+            <div class="working-route-finder">
+                <div class="route-header">
+                    <button class="back-btn" onclick="goToScreen(7)">←</button>
+                    <div class="route-title">Find Safe Routes</div>
+                </div>
+
+                <div class="container">
+                    <div class="input-section">
+                        <form id="routeForm">
+                            <div class="input-group">
+                                <label for="source">From:</label>
+                                <input type="text" id="source" placeholder="Enter starting location" required>
+                            </div>
+                            
+                            <div class="input-group">
+                                <label for="destination">To:</label>
+                                <input type="text" id="destination" placeholder="Enter destination" required>
+                            </div>
+                            
+                            <div class="input-group">
+                                <label for="timeOfDay">Time of Travel:</label>
+                                <select id="timeOfDay" required>
+                                    <option value="day">Day (6 AM - 6 PM)</option>
+                                    <option value="night">Night (6 PM - 6 AM)</option>
+                                </select>
+                            </div>
+                            
+                            <button type="submit" id="findRoutes" class="primary-btn">Find Safe Routes</button>
+                        </form>
+                    </div>
+
+                    <div id="loading" class="loading hidden">
+                        <p>🔍 Finding safest routes...</p>
+                    </div>
+
+                    <div id="results" class="results hidden">
+                        <h2>Route Options</h2>
+                        <div id="routeList"></div>
+                    </div>
+
+                    <div id="map" class="map hidden"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 17. SAFETY INSIGHTS SCREEN -->
+        <div class="screen" id="screen17">
+            <div class="insights-screen">
+                <div class="route-header">
+                    <button class="back-btn" onclick="goToScreen(7)">←</button>
+                    <div class="route-title">Safety Insights</div>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-number">47</div>
+                        <div class="stat-description">Safe routes taken</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">8.2</div>
+                        <div class="stat-description">Average safety score</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">156</div>
+                        <div class="stat-description">Kilometers traveled safely</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">12</div>
+                        <div class="stat-description">Night journeys</div>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <div class="chart-title">Travel Time Analysis</div>
+                    <div class="chart-bar">
+                        <div class="bar-label">Morning</div>
+                        <div class="bar-fill">
+                            <div class="bar-progress" style="width: 85%;"></div>
+                        </div>
+                        <div class="bar-value">85%</div>
+                    </div>
+                    <div class="chart-bar">
+                        <div class="bar-label">Afternoon</div>
+                        <div class="bar-fill">
+                            <div class="bar-progress" style="width: 92%;"></div>
+                        </div>
+                        <div class="bar-value">92%</div>
+                    </div>
+                    <div class="chart-bar">
+                        <div class="bar-label">Evening</div>
+                        <div class="bar-fill">
+                            <div class="bar-progress" style="width: 68%;"></div>
+                        </div>
+                        <div class="bar-value">68%</div>
+                    </div>
+                    <div class="chart-bar">
+                        <div class="bar-label">Night</div>
+                        <div class="bar-fill">
+                            <div class="bar-progress" style="width: 45%;"></div>
+                        </div>
+                        <div class="bar-value">45%</div>
+                    </div>
+                </div>
+
+                <div class="chart-container">
+                    <div class="chart-title">Safety Score Trends</div>
+                    <div class="chart-bar">
+                        <div class="bar-label">This Week</div>
+                        <div class="bar-fill">
+                            <div class="bar-progress" style="width: 88%;"></div>
+                        </div>
+                        <div class="bar-value">8.8</div>
+                    </div>
+                    <div class="chart-bar">
+                        <div class="bar-label">Last Week</div>
+                        <div class="bar-fill">
+                            <div class="bar-progress" style="width: 82%;"></div>
+                        </div>
+                        <div class="bar-value">8.2</div>
+                    </div>
+                    <div class="chart-bar">
+                        <div class="bar-label">This Month</div>
+                        <div class="bar-fill">
+                            <div class="bar-progress" style="width: 85%;"></div>
+                        </div>
+                        <div class="bar-value">8.5</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- PERFECTLY ALIGNED NAVIGATION CONTROLS - ALWAYS VISIBLE -->
+    <div class="nav-controls" id="navControls">
+        <button class="nav-btn" id="prevBtn" onclick="prevScreen()">← Previous</button>
+        <button class="nav-btn" id="nextBtn" onclick="nextScreen()">Next →</button>
+        <button class="nav-btn" id="homeBtn" onclick="goToScreen(7)">🏠 Home</button>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let currentScreen = 1;
+        const totalScreens = 17;
+
+        const screenTitles = [
+            "Splash Screen",
+            "Onboarding 1/3",
+            "Onboarding 2/3", 
+            "Onboarding 3/3",
+            "Login/Signup",
+            "Location Permission",
+            "Home Screen",
+            "Chat with SafeRoute AI",
+            "Profile",
+            "Route Options",
+            "Route Details",
+            "Live Navigation",
+            "Emergency SOS",
+            "Settings",
+            "Report Unsafe Area",
+            "Working Route Finder",
+            "Safety Insights"
+        ];
+
+        function updateIndicator() {
+            const indicator = document.getElementById('indicator');
+            if (indicator) {
+                indicator.textContent = `${currentScreen}/17 - ${screenTitles[currentScreen - 1]}`;
+            }
+            
+            // Update navigation buttons
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const homeBtn = document.getElementById('homeBtn');
+            const navControls = document.getElementById('navControls');
+            
+            // HIDE NAVIGATION ONLY ON SPLASH SCREEN
+            if (currentScreen === 1) {
+                navControls.style.display = 'none';
+            } else {
+                navControls.style.display = 'flex';
+                
+                // Always show both buttons after splash
+                prevBtn.style.display = 'inline-block';
+                nextBtn.style.display = 'inline-block';
+                
+                // Disable Previous on second screen (first onboarding)
+                prevBtn.disabled = (currentScreen === 2);
+                
+                // REMOVE NEXT BUTTON ON LAST SCREEN (Screen 17)
+                if (currentScreen >= totalScreens) {
+                    nextBtn.style.display = 'none';
+                } else {
+                    nextBtn.style.display = 'inline-block';
+                    nextBtn.disabled = false;
+                }
+                
+                // Show Home button after location permission
+                if (currentScreen > 6) {
+                    homeBtn.style.display = 'inline-block';
+                } else {
+                    homeBtn.style.display = 'none';
+                }
+            }
+        }
+
+        function showScreen(screenNumber) {
+            console.log(`Showing screen ${screenNumber}`);
+            
+            if (screenNumber < 1 || screenNumber > totalScreens) {
+                console.log(`Invalid screen number: ${screenNumber}`);
+                return;
+            }
+            
+            // Hide all screens
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            
+            // Show target screen
+            const targetScreen = document.getElementById(`screen${screenNumber}`);
+            if (targetScreen) {
+                targetScreen.classList.add('active');
+                currentScreen = screenNumber;
+                updateIndicator();
+                console.log(`Successfully showed screen ${screenNumber}`);
+            }
+        }
+
+        function nextScreen() {
+            console.log(`Next: Current=${currentScreen}, Total=${totalScreens}`);
+            if (currentScreen < totalScreens) {
+                showScreen(currentScreen + 1);
+            }
+        }
+
+        function prevScreen() {
+            console.log(`Prev: Current=${currentScreen}`);
+            if (currentScreen > 1) {
+                showScreen(currentScreen - 1);
+            }
+        }
+
+        function goToScreen(screenNumber) {
+            console.log(`Going to screen ${screenNumber}`);
+            showScreen(screenNumber);
+        }
+
+        // Interactive functions
+        function toggleSwitch(element) {
+            element.classList.toggle('active');
+        }
+
+        function selectIssue(element) {
+            document.querySelectorAll('.issue-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            element.classList.add('selected');
+        }
+
+        function submitReport() {
+            alert('✅ Report submitted successfully! Thank you for helping make SafeRoute safer for everyone.');
+            goToScreen(7); // Go back to home
+        }
+
+        function activateSOS() {
+            alert('🚨 SOS Activated!\n\nEmergency services have been notified.\nYour location has been shared with emergency contacts.\n\nHelp is on the way!');
+        }
+
+        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded, initializing...');
+            
+            // Make functions globally available
+            window.nextScreen = nextScreen;
+            window.prevScreen = prevScreen;
+            window.goToScreen = goToScreen;
+            window.toggleSwitch = toggleSwitch;
+            window.selectIssue = selectIssue;
+            window.submitReport = submitReport;
+            window.activateSOS = activateSOS;
+            
+            // Initialize
+            updateIndicator();
+            
+            // Auto-advance splash screen after 3 seconds
+            setTimeout(() => {
+                if (currentScreen === 1) {
+                    console.log('Auto-advancing from splash screen');
+                    nextScreen();
+                }
+            }, 3000);
+            
+            // Keyboard navigation
+            document.addEventListener('keydown', function(event) {
+                if (event.key === 'ArrowRight' || event.key === ' ') {
+                    event.preventDefault();
+                    nextScreen();
+                } else if (event.key === 'ArrowLeft') {
+                    event.preventDefault();
+                    prevScreen();
+                } else if (event.key === 'Home') {
+                    event.preventDefault();
+                    goToScreen(7); // Go to home screen
+                }
+            });
+
+            // Touch/swipe navigation
+            let startX = 0;
+            let startY = 0;
+            
+            document.addEventListener('touchstart', function(e) {
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+            });
+            
+            document.addEventListener('touchend', function(e) {
+                if (!startX || !startY) return;
+                
+                const endX = e.changedTouches[0].clientX;
+                const endY = e.changedTouches[0].clientY;
+                
+                const diffX = startX - endX;
+                const diffY = startY - endY;
+                
+                // Only swipe if horizontal movement is greater than vertical
+                if (Math.abs(diffX) > Math.abs(diffY)) {
+                    if (Math.abs(diffX) > 50) { // Minimum swipe distance
+                        if (diffX > 0) {
+                            // Swipe left - next screen
+                            nextScreen();
+                        } else {
+                            // Swipe right - previous screen
+                            prevScreen();
+                        }
+                    }
+                }
+                
+                startX = 0;
+                startY = 0;
+            });
+            
+            // Prevent zoom on double tap
+            let lastTouchEnd = 0;
+            document.addEventListener('touchend', function(event) {
+                const now = (new Date()).getTime();
+                if (now - lastTouchEnd <= 300) {
+                    event.preventDefault();
+                }
+                lastTouchEnd = now;
+            }, false);
+            
+            console.log('Initialization complete');
+        });
+
+        // Working Route Finder functionality (from index.html)
+        document.addEventListener('DOMContentLoaded', function() {
+            const routeForm = document.getElementById('routeForm');
+            if (routeForm) {
+                routeForm.addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    
+                    const source = document.getElementById('source').value;
+                    const destination = document.getElementById('destination').value;
+                    const timeOfDay = document.getElementById('timeOfDay').value;
+                    
+                    await findRoutes(source, destination, timeOfDay);
+                });
+            }
+        });
+
+        // ENHANCED LIVE NAVIGATION WITH GOOGLE MAPS
+        let liveNavMap = null;
+        let currentLocationMarker = null;
+        let routePath = null;
+        let navigationInterval = null;
+
+        // Initialize live navigation map when screen 12 is shown
+        function initializeLiveNavigation() {
+            if (currentScreen === 12 && !liveNavMap) {
+                console.log('Initializing live navigation map...');
+                
+                // Simulate current location (Delhi area)
+                const currentLocation = { lat: 28.6139, lng: 77.2090 };
+                const destination = { lat: 28.5355, lng: 77.3910 }; // Noida
+                
+                // Initialize map
+                liveNavMap = L.map('liveNavMap').setView([currentLocation.lat, currentLocation.lng], 15);
+                
+                // Add tile layer
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(liveNavMap);
+                
+                // Add current location marker
+                currentLocationMarker = L.marker([currentLocation.lat, currentLocation.lng], {
+                    icon: L.divIcon({
+                        className: 'current-location-marker',
+                        html: '<div class="location-dot"></div><div class="location-pulse"></div>',
+                        iconSize: [20, 20],
+                        iconAnchor: [10, 10]
+                    })
+                }).addTo(liveNavMap);
+                
+                // Add destination marker
+                L.marker([destination.lat, destination.lng], {
+                    icon: L.divIcon({
+                        className: 'destination-marker',
+                        html: '🏁',
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 15]
+                    })
+                }).addTo(liveNavMap);
+                
+                // Create route path
+                const routeCoordinates = [
+                    [currentLocation.lat, currentLocation.lng],
+                    [28.6200, 77.2300],
+                    [28.6100, 77.2500],
+                    [28.5800, 77.3200],
+                    [destination.lat, destination.lng]
+                ];
+                
+                routePath = L.polyline(routeCoordinates, {
+                    color: '#4CAF50',
+                    weight: 6,
+                    opacity: 0.8
+                }).addTo(liveNavMap);
+                
+                // Add safety zones
+                addSafetyZones();
+                
+                // Start live navigation simulation
+                startNavigationSimulation();
+                
+                console.log('Live navigation map initialized successfully');
+            }
+        }
+
+        // Add safety zones to the map
+        function addSafetyZones() {
+            // High safety zone (green)
+            L.circle([28.6139, 77.2090], {
+                color: '#4CAF50',
+                fillColor: '#4CAF50',
+                fillOpacity: 0.1,
+                radius: 500
+            }).addTo(liveNavMap).bindPopup('High Safety Zone - Well lit, CCTV coverage');
+            
+            // Medium safety zone (orange)
+            L.circle([28.6100, 77.2500], {
+                color: '#FF9800',
+                fillColor: '#FF9800',
+                fillOpacity: 0.1,
+                radius: 300
+            }).addTo(liveNavMap).bindPopup('Medium Safety Zone - Moderate lighting');
+            
+            // Low safety zone (red)
+            L.circle([28.5800, 77.3200], {
+                color: '#E53E3E',
+                fillColor: '#E53E3E',
+                fillOpacity: 0.1,
+                radius: 200
+            }).addTo(liveNavMap).bindPopup('Low Safety Zone - Poor lighting, isolated area');
+        }
+
+        // Start navigation simulation
+        function startNavigationSimulation() {
+            let timeLeft = 18;
+            let distanceLeft = 8.2;
+            let currentHour = 22;
+            let currentMinute = 27;
+            
+            navigationInterval = setInterval(() => {
+                // Update time and distance
+                timeLeft = Math.max(0, timeLeft - 1);
+                distanceLeft = Math.max(0, distanceLeft - 0.1);
+                currentMinute += 1;
+                
+                if (currentMinute >= 60) {
+                    currentHour += 1;
+                    currentMinute = 0;
+                }
+                
+                // Update UI
+                document.getElementById('timeLeft').textContent = timeLeft;
+                document.getElementById('distanceLeft').textContent = distanceLeft.toFixed(1);
+                document.getElementById('eta').textContent = `${currentHour}:${currentMinute.toString().padStart(2, '0')}`;
+                
+                // Update safety alerts based on progress
+                updateSafetyAlert(timeLeft);
+                
+                // Stop simulation when arrived
+                if (timeLeft <= 0) {
+                    clearInterval(navigationInterval);
+                    showArrivalMessage();
+                }
+            }, 2000); // Update every 2 seconds for demo
+        }
+
+        // Update safety alerts during navigation
+        function updateSafetyAlert(timeLeft) {
+            const alertElement = document.getElementById('safetyAlert');
+            
+            if (timeLeft > 15) {
+                alertElement.innerHTML = '✅ Currently in high safety zone. Well-lit area with CCTV coverage.';
+                alertElement.style.background = '#d4edda';
+                alertElement.style.color = '#155724';
+            } else if (timeLeft > 8) {
+                alertElement.innerHTML = '⚠️ Approaching medium safety zone in 200m. Stay alert.';
+                alertElement.style.background = '#fff3cd';
+                alertElement.style.color = '#856404';
+            } else if (timeLeft > 3) {
+                alertElement.innerHTML = '🚨 Entering low safety zone. Consider alternative route or call someone.';
+                alertElement.style.background = '#f8d7da';
+                alertElement.style.color = '#721c24';
+            } else {
+                alertElement.innerHTML = '🎯 Approaching destination. Safe area ahead.';
+                alertElement.style.background = '#d4edda';
+                alertElement.style.color = '#155724';
+            }
+        }
+
+        // Show arrival message
+        function showArrivalMessage() {
+            alert('🎉 You have arrived safely at your destination!\n\nSafeRoute helped you navigate the safest route. Thank you for using SafeRoute!');
+        }
+
+        // Navigation control functions
+        function centerMap() {
+            if (liveNavMap && currentLocationMarker) {
+                liveNavMap.setView(currentLocationMarker.getLatLng(), 15);
+            }
+        }
+
+        function toggleView() {
+            if (liveNavMap) {
+                const currentZoom = liveNavMap.getZoom();
+                liveNavMap.setZoom(currentZoom === 15 ? 12 : 15);
+            }
+        }
+
+        // Clean up navigation when leaving screen
+        function cleanupNavigation() {
+            if (navigationInterval) {
+                clearInterval(navigationInterval);
+                navigationInterval = null;
+            }
+            if (liveNavMap) {
+                liveNavMap.remove();
+                liveNavMap = null;
+                currentLocationMarker = null;
+                routePath = null;
+            }
+        }
+
+        // Override showScreen to initialize navigation
+        const originalShowScreen = showScreen;
+        showScreen = function(screenNumber) {
+            // Clean up previous navigation
+            if (currentScreen === 12) {
+                cleanupNavigation();
+            }
+            
+            // Call original function
+            originalShowScreen(screenNumber);
+            
+            // Initialize navigation if going to screen 12
+            if (screenNumber === 12) {
+                setTimeout(initializeLiveNavigation, 100);
+            }
+        };
+
+        // API Configuration
+        const API_BASE_URL = 'https://saferoute-ai-2-no7k.onrender.com';
+        let map = null;
+
+        // Main function to find routes
+        async function findRoutes(source, destination, timeOfDay) {
+            showLoading();
+            
+            try {
+                const response = await fetch(`${API_BASE_URL}/find-routes`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        source: source,
+                        destination: destination,
+                        time_of_day: timeOfDay
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to fetch routes');
+                }
+                
+                const data = await response.json();
+                displayRoutes(data.routes);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Failed to find routes. Please try again.');
+            }
+        }
+
+        // Show loading state
+        function showLoading() {
+            const loadingDiv = document.getElementById('loading');
+            const resultsDiv = document.getElementById('results');
+            const mapDiv = document.getElementById('map');
+            
+            if (loadingDiv) loadingDiv.classList.remove('hidden');
+            if (resultsDiv) resultsDiv.classList.add('hidden');
+            if (mapDiv) mapDiv.classList.add('hidden');
+        }
+
+        // Display routes
+        function displayRoutes(routes) {
+            const loadingDiv = document.getElementById('loading');
+            const resultsDiv = document.getElementById('results');
+            const routeListDiv = document.getElementById('routeList');
+            
+            if (loadingDiv) loadingDiv.classList.add('hidden');
+            if (resultsDiv) resultsDiv.classList.remove('hidden');
+            
+            if (routeListDiv) {
+                routeListDiv.innerHTML = '';
+                
+                routes.forEach((route, index) => {
+                    const routeCard = createRouteCard(route, index);
+                    routeListDiv.appendChild(routeCard);
+                });
+            }
+            
+            // Show map with routes
+            showMap(routes);
+        }
+
+        // Create route card HTML
+        function createRouteCard(route, index) {
+            const card = document.createElement('div');
+            card.className = 'route-card';
+            
+            const safetyClass = getSafetyClass(route.safety_score);
+            const safetyText = getSafetyText(route.safety_score);
+            
+            card.innerHTML = `
+                <div class="route-card-header">
+                    <div class="route-name">${route.name}</div>
+                    <div class="safety-badge ${safetyClass}">${safetyText}</div>
+                </div>
+                <div class="route-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">${route.distance}</div>
+                        <div class="stat-label">distance</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${route.duration}</div>
+                        <div class="stat-label">duration</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${route.safety_score}</div>
+                        <div class="stat-label">safety</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${route.risk_level}</div>
+                        <div class="stat-label">risk</div>
+                    </div>
+                </div>
+                <div class="safety-features">
+                    <strong>Safety Features:</strong> ${route.safety_features.join(', ')}
+                </div>
+            `;
+            
+            return card;
+        }
+
+        // Get safety class for styling
+        function getSafetyClass(score) {
+            if (score >= 7) return 'safety-high';
+            if (score >= 4) return 'safety-medium';
+            return 'safety-low';
+        }
+
+        // Get safety text
+        function getSafetyText(score) {
+            if (score >= 7) return 'SAFE';
+            if (score >= 4) return 'MODERATE';
+            return 'RISKY';
+        }
+
+        // Show map with routes
+        function showMap(routes) {
+            const mapDiv = document.getElementById('map');
+            if (!mapDiv) return;
+            
+            mapDiv.classList.remove('hidden');
+            
+            if (map) {
+                map.remove();
+            }
+            
+            // Initialize map (centered on Delhi)
+            map = L.map('map').setView([28.6139, 77.2090], 12);
+            
+            // Add tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            // Add route markers and lines
+            const colors = ['red', 'blue', 'green', 'orange', 'purple'];
+            
+            routes.forEach((route, index) => {
+                const color = colors[index % colors.length];
+                
+                // Add start marker
+                L.marker([route.coordinates.start.lat, route.coordinates.start.lng])
+                    .addTo(map)
+                    .bindPopup(`Start: ${route.name}`);
+                
+                // Add end marker
+                L.marker([route.coordinates.end.lat, route.coordinates.end.lng])
+                    .addTo(map)
+                    .bindPopup(`End: ${route.name}`);
+                
+                // Add route line
+                const routeLine = L.polyline(route.coordinates.path, {
+                    color: color,
+                    weight: 4,
+                    opacity: 0.7
+                }).addTo(map);
+                
+                routeLine.bindPopup(`${route.name} - Safety: ${route.safety_score}/10`);
+            });
+            
+            // Fit map to show all routes
+            const group = new L.featureGroup();
+            routes.forEach(route => {
+                route.coordinates.path.forEach(coord => {
+                    L.marker(coord).addTo(group);
+                });
+            });
+            
+            if (group.getLayers().length > 0) {
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
+        }
+
+        // Show error message
+        function showError(message) {
+            const loadingDiv = document.getElementById('loading');
+            const resultsDiv = document.getElementById('results');
+            const routeListDiv = document.getElementById('routeList');
+            
+            if (loadingDiv) loadingDiv.classList.add('hidden');
+            if (resultsDiv) resultsDiv.classList.remove('hidden');
+            if (routeListDiv) {
+                routeListDiv.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: #dc3545;">
+                        <h3>Error</h3>
+                        <p>${message}</p>
+                        <p style="margin-top: 10px; font-size: 14px;">Make sure the backend is running on Render</p>
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
